@@ -118,9 +118,9 @@ func ConfigField(defaultVerb string, forOutput bool, extraChildren ...*service.C
 			service.NewBoolField(hcFieldNegotiateEnabled).
 				Description("Enable the spnego authentication").
 				Default(false),
-			service.NewStringEnumField(hcFieldNegotiateApi, "sspi", "pure", "auto").
-				Description("Change the underlying api, defaults to SSPI on windows and Pure for other targets").
-				Default("auto"),
+			service.NewStringEnumField(hcFieldNegotiateApi, "sspi", "pure").
+				Description("Change the underlying api, defaults to Pure, sspi only works on windows.").
+				Default("pure"),
 			service.NewBoolField(hcFieldNegotiateUserOnlyForFallback).
 				Description("If a fallback to NTLM is required (no Kerberos on Pure api), a user configuration is required. Use this option to use this user only as a fallback.").
 				Default(false),
@@ -215,10 +215,8 @@ func ConfigFromParsed(pConf *service.ParsedConfig) (conf OldConfig, err error) {
 		conf.NegotiateApi = option.SSPI
 	case "pure":
 		conf.NegotiateApi = option.PURE
-	case "auto":
-		conf.NegotiateApi = option.AUTO
 	default:
-		conf.NegotiateApi = option.AUTO
+		conf.NegotiateApi = option.PURE
 	}
 
 	negotiateAuthOptions := option.AuthOptions{
