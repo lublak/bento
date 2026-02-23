@@ -3,14 +3,17 @@ package pure
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"text/template"
 
+	"github.com/warpstreamlabs/bento/public/bloblang"
 	"github.com/warpstreamlabs/bento/public/service"
 )
 
 const (
-	tpFieldTemplate = "template"
+	tpFieldText      = "text"
+	tpFieldFunctions = "functions"
 )
 
 func templateProcSpec() *service.ConfigSpec {
@@ -19,10 +22,14 @@ func templateProcSpec() *service.ConfigSpec {
 		Beta().
 		Summary("Transforms messages using Go template syntax.").
 		Fields(
-			service.NewStringField(tpFieldTemplate).
+			service.NewStringField(tpFieldText).
 				Description("The Go template to apply to messages.").
 				Example("{{ .name }} - {{ meta \"source\" }}").
-				Example("{{ range .items }}{{ .name }}: {{ .value }}{{ end }}"),
+				Example("{{ range .items }}{{ .name }}: {{ .value }}{{ end }}").
+				Default("{{ . }}"),
+			service.NewStringMapField(tpFieldFunctions).
+				Description("A map of Bloblang functions to make available to the template.").
+				Optional(),
 		)
 }
 
@@ -43,16 +50,44 @@ type templateProc struct {
 }
 
 func newTemplateProcessor(conf *service.ParsedConfig, mgr *service.Resources) (*templateProc, error) {
-	templateStr, err := conf.FieldString(tpFieldTemplate)
+	templateStr, err := conf.FieldString(tpFieldText)
 	if err != nil {
 		return nil, err
 	}
 
-	tmpl, err := template.New("template").Funcs(template.FuncMap{
-		"meta": func(name string) any {
+	var functions template.FuncMap
+
+	if conf.Contains(tpFieldFunctions) {
+		functionsMap, err := conf.FieldStringMap(tpFieldFunctions)
+		if err != nil {
+			return nil, err
+		}
+
+		functions = make(template.FuncMap, len(functionsMap)+1)
+		for name, fn := range functionsMap {
+			blob, err := bloblang.Parse(fn)
+			if err != nil {
+				return nil, err
+			}
+			if name == "meta" {
+				return nil, errors.New("can not define a function named meta")
+			}
+			functions[name] = func(msg any) (any, error) {
+				return blob.Query(msg)
+			}
+		}
+		functions["meta"] = func(name string) any {
 			return nil
-		},
-	}).Parse(templateStr)
+		}
+	} else {
+		functions = template.FuncMap{
+			"meta": func(name string) any {
+				return nil
+			},
+		}
+	}
+
+	tmpl, err := template.New("template").Funcs(functions).Parse(templateStr)
 	if err != nil {
 		return nil, fmt.Errorf("Failed to parse template: %w", err)
 	}

@@ -30,41 +30,59 @@ func TestTemplateProcessor(t *testing.T) {
 	}{
 		{
 			name:     "basic template",
-			template: `template: "{{ .foo }} - {{ meta \"meta_foo\" }}"`,
+			template: `text: "{{ .foo }} - {{ meta \"meta_foo\" }}"`,
 			input:    []byte(`{"foo":"bar"}`),
 			metaKV:   map[string]string{"meta_foo": "meta_bar"},
 			expected: "bar - meta_bar",
 		},
 		{
 			name:     "range template",
-			template: `template: "{{ range .items }}{{ .name }}: {{ .value }}{{ end }}"`,
+			template: `text: "{{ range .items }}{{ .name }}: {{ .value }}{{ end }}"`,
 			input:    []byte(`{"items":[{"name":"foo","value":1},{"name":"bar","value":2}]}`),
 			expected: "foo: 1bar: 2",
 		},
 		{
 			name:     "meta access with values",
-			template: `template: "{{ meta \"key1\" }} - {{ meta \"key2\" }}"`,
+			template: `text: "{{ meta \"key1\" }} - {{ meta \"key2\" }}"`,
 			input:    []byte(`{}`),
 			metaKV:   map[string]string{"key1": "value1", "key2": "value2"},
 			expected: "value1 - value2",
 		},
 		{
 			name:     "meta access with nonexistent key",
-			template: `template: "{{ meta \"nonexistent\" }}"`,
+			template: `text: "{{ meta \"nonexistent\" }}"`,
 			input:    []byte(`{}`),
 			expected: "<no value>",
 		},
 		{
 			name:     "field access with nonexistent key",
-			template: `template: "{{ .nonexistent }}"`,
+			template: `text: "{{ .nonexistent }}"`,
 			input:    []byte(`{}`),
 			expected: "<no value>",
 		},
 		{
 			name:          "invalid template syntax",
-			template:      `template: "{{ invalid syntax"`,
+			template:      `text: "{{ invalid syntax"`,
 			expectedError: true,
 			errorValue:    "Failed to parse template",
+		},
+		{
+			name: "template functions - basic usage",
+			template: `
+text: "{{ .foo }} - {{ uppercase .bar }}"
+functions:
+  uppercase: |
+    root = this.uppercase()
+`,
+			input:    []byte(`{"foo":"hello","bar":"world"}`),
+			expected: "hello - WORLD",
+		},
+		{
+			name:          "template functions - error handling",
+			template:      `text: "{{ nonexistent_function .foo }}"`,
+			input:         []byte(`{"foo":"hello","bar":"world"}`),
+			expectedError: true,
+			errorValue:    "function \"nonexistent_function\" not defined",
 		},
 	}
 
@@ -86,6 +104,14 @@ func TestTemplateProcessor(t *testing.T) {
 			batch, err := proc.Process(t.Context(), msg)
 			require.NoError(t, err)
 			require.Len(t, batch, 1)
+
+			msg = batch[0]
+
+			for k, v := range test.metaKV {
+				m, ok := msg.MetaGetMut(k)
+				require.True(t, ok)
+				assert.Equal(t, m, v)
+			}
 
 			result, err := batch[0].AsBytes()
 			require.NoError(t, err)
