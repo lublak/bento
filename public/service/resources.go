@@ -145,8 +145,8 @@ type wrapperFS struct {
 	fallback ifs.FS
 }
 
-func (f *wrapperFS) Chdir(dir string) {
-	f.workDir = f.joinWithWorkdir(dir)
+func (f *wrapperFS) Chdir(dir string) ifs.FS {
+	return &wrapperFS{f.joinWithWorkdir(dir), f.fs, f.fallback}
 }
 
 func (o *wrapperFS) joinWithWorkdir(path string) string {
@@ -197,8 +197,8 @@ func NewFS(filesystem fs.FS) *FS {
 	return &FS{&wrapperFS{"", filesystem, ifs.OS()}}
 }
 
-func (f *FS) Chdir(dir string) {
-	f.i.Chdir(dir)
+func (f *FS) Chdir(dir string) ifs.FS {
+	return &FS{f.i.Chdir(dir)}
 }
 
 // Open opens the named file for reading.

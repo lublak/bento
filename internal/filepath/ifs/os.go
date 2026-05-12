@@ -13,7 +13,7 @@ var _ fs.FS = OS()
 // FS is a superset of fs.FS that includes goodies that bento components
 // specifically need.
 type FS interface {
-	Chdir(dir string)
+	Chdir(dir string) FS
 	Open(name string) (fs.File, error)
 	OpenFile(name string, flag int, perm fs.FileMode) (fs.File, error)
 	Stat(name string) (fs.FileInfo, error)
@@ -78,8 +78,8 @@ type osPT struct {
 	workDir string
 }
 
-func (o *osPT) Chdir(dir string) {
-	o.workDir = o.joinWithWorkdir(dir)
+func (o *osPT) Chdir(dir string) FS {
+	return &osPT{workDir: o.joinWithWorkdir(dir)}
 }
 
 func (o *osPT) joinWithWorkdir(path string) string {

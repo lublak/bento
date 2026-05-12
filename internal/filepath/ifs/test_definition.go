@@ -8,12 +8,12 @@ import (
 )
 
 type TestFS struct {
-	MapFS   fstest.MapFS
 	workDir string
+	MapFS   fstest.MapFS
 }
 
-func (o TestFS) Chdir(dir string) {
-	o.workDir = o.joinWithWorkdir(dir)
+func (o TestFS) Chdir(dir string) FS {
+	return TestFS{workDir: o.joinWithWorkdir(dir), MapFS: o.MapFS}
 }
 
 func (o TestFS) joinWithWorkdir(path string) string {
