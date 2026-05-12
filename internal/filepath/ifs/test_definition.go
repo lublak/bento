@@ -12,27 +12,27 @@ type TestFS struct {
 	MapFS   fstest.MapFS
 }
 
-func (o TestFS) Chdir(dir string) FS {
-	return TestFS{workDir: o.joinWithWorkdir(dir), MapFS: o.MapFS}
+func (t TestFS) Chdir(dir string) FS {
+	return TestFS{workDir: t.joinWithWorkdir(dir), MapFS: t.MapFS}
 }
 
-func (o TestFS) joinWithWorkdir(path string) string {
+func (t TestFS) joinWithWorkdir(path string) string {
 	if !filepath.IsAbs(path) {
-		path = filepath.Join(o.workDir, path)
+		path = filepath.Join(t.workDir, path)
 	}
 	return path
 }
 
-func (o TestFS) Open(name string) (fs.File, error) {
-	panic("unimplemented")
+func (t TestFS) Open(name string) (fs.File, error) {
+	return t.MapFS.Open(t.joinWithWorkdir(name))
 }
 
 func (t TestFS) OpenFile(name string, flag int, perm fs.FileMode) (fs.File, error) {
 	return nil, errors.New("not implemented")
 }
 
-func (o TestFS) Stat(name string) (fs.FileInfo, error) {
-	panic("unimplemented")
+func (t TestFS) Stat(name string) (fs.FileInfo, error) {
+	return t.MapFS.Stat(t.joinWithWorkdir(name))
 }
 
 func (t TestFS) MkdirAll(path string, perm fs.FileMode) error {
