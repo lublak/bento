@@ -215,8 +215,11 @@ func (s *sqlCache) Exists(ctx context.Context, key string) (exists bool, err err
 		Where(squirrel.Eq{s.keyColumn: key}).
 		RunWith(s.db).QueryRowContext(ctx).
 		Scan()
-	if err != nil && errors.Is(err, sql.ErrNoRows) {
-		return false, nil
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, nil
+		}
+		return false, err
 	}
 	return true, err
 }
