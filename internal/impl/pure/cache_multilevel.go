@@ -72,7 +72,7 @@ type multilevelCache struct {
 	caches []string
 }
 
-func newMultilevelCache(levels []string, mgr cacheProvider, log *service.Logger) (service.Cache, error) {
+func newMultilevelCache(levels []string, mgr cacheProvider, log *service.Logger) (*multilevelCache, error) {
 	if len(levels) < 2 {
 		return nil, fmt.Errorf("expected at least two cache levels, found %v", len(levels))
 	}
