@@ -90,7 +90,7 @@ func (a *metricsCache) Get(ctx context.Context, key string) ([]byte, error) {
 
 func (a *metricsCache) Exists(ctx context.Context, key string) (bool, error) {
 	started := time.Now()
-	b, err := CacheKeyExists(a.c, ctx, key)
+	b, err := a.c.Exists(ctx, key)
 	a.mExistsLatency.Timing(int64(time.Since(started)))
 	if err != nil {
 		a.mExistsError.Incr(1)

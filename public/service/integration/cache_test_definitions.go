@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/warpstreamlabs/bento/internal/component"
-	"github.com/warpstreamlabs/bento/internal/component/cache"
 )
 
 // CacheTestOpenClose checks that the cache can be started, an item added, and
@@ -59,7 +58,7 @@ func CacheTestMissingKeyExists() CacheTestDefinition {
 				closeCache(t, c)
 			})
 
-			res, err := cache.CacheKeyExists(c, env.ctx, "missingkey")
+			res, err := c.Exists(env.ctx, "missingkey")
 			assert.NoError(t, err)
 			assert.False(t, res)
 		},
@@ -160,7 +159,7 @@ func CacheTestExistsAndSet(n int) CacheTestDefinition {
 			for i := range n {
 				key := fmt.Sprintf("key%v", i)
 
-				res, err := cache.CacheKeyExists(c, env.ctx, key)
+				res, err := c.Exists(env.ctx, key)
 				require.NoError(t, err)
 				assert.True(t, res)
 			}

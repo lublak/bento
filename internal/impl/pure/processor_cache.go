@@ -282,7 +282,7 @@ func newCacheGetOperator() cacheOperator {
 
 func newCacheExistsOperator() cacheOperator {
 	return func(ctx context.Context, part *message.Part, c cache.V1, key string, _ []byte, _ *time.Duration) error {
-		result, err := cache.CacheKeyExists(c, ctx, key)
+		result, err := c.Exists(ctx, key)
 		if err != nil {
 			return err
 		}

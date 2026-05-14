@@ -21,9 +21,6 @@ type Cache interface {
 	// Get a cache item.
 	Get(ctx context.Context, key string) ([]byte, error)
 
-	// Check if a cache item exists.
-	Exists(ctx context.Context, key string) (bool, error)
-
 	// Set a cache item, specifying an optional TTL. It is okay for caches to
 	// ignore the ttl parameter if it isn't possible to implement.
 	Set(ctx context.Context, key string, value []byte, ttl *time.Duration) error
@@ -58,12 +55,21 @@ type batchedCache interface {
 	SetMulti(ctx context.Context, keyValues ...CacheItem) error
 }
 
+// existsCache represents a cache where the underlying implementation is able
+// to benefit from exists requests. This interface is optional for caches
+// and when implemented will automatically be utilised where possible.
+type existsCache interface {
+	// Check if a cache item exists.
+	Exists(ctx context.Context, key string) (bool, error)
+}
+
 //------------------------------------------------------------------------------
 
 // Implements types.Cache.
 type airGapCache struct {
 	c  Cache
 	cm batchedCache
+	ce existsCache
 }
 
 func newAirGapCache(c Cache, stats metrics.Type) cache.V1 {
@@ -81,7 +87,17 @@ func (a *airGapCache) Get(ctx context.Context, key string) ([]byte, error) {
 }
 
 func (a *airGapCache) Exists(ctx context.Context, key string) (bool, error) {
-	return a.c.Exists(ctx, key)
+	if a.ce != nil {
+		return a.ce.Exists(ctx, key)
+	}
+	_, err := a.Get(ctx, key)
+	if err != nil {
+		if errors.Is(err, component.ErrKeyNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, nil
 }
 
 func (a *airGapCache) Set(ctx context.Context, key string, value []byte, ttl *time.Duration) error {
@@ -144,7 +160,7 @@ func (r *reverseAirGapCache) Get(ctx context.Context, key string) ([]byte, error
 }
 
 func (r *reverseAirGapCache) Exists(ctx context.Context, key string) (bool, error) {
-	return cache.CacheKeyExists(r.c, ctx, key)
+	return r.c.Exists(ctx, key)
 }
 
 func (r *reverseAirGapCache) Set(ctx context.Context, key string, value []byte, ttl *time.Duration) error {
