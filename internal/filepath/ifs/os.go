@@ -104,7 +104,7 @@ func (o *osPT) OpenFile(name string, flag int, perm fs.FileMode) (fs.File, error
 func (o *osPT) Exists(name string) (bool, error) {
 	_, err := os.Stat(name)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if errors.Is(err, os.ErrNotExist) {
 			return false, nil
 		}
 		return false, err
