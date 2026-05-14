@@ -50,6 +50,30 @@ target: foocache
 	}, mgr.Caches["foocache"])
 }
 
+func TestCacheMultiSingleAppend(t *testing.T) {
+	mgr := mock.NewManager()
+	mgr.Caches["foocache"] = map[string]mock.CacheItem{}
+
+	w := testCacheOutput(t, mgr, `
+key: ${!json("id")}
+target: foocache
+append: true
+`)
+
+	tCtx := context.Background()
+
+	require.NoError(t, w.WriteBatch(tCtx, message.QuickBatch([][]byte{
+		[]byte(`{"id":"1","value":"first"}`),
+	})))
+	require.NoError(t, w.WriteBatch(tCtx, message.QuickBatch([][]byte{
+		[]byte(`{"id":"1","value":"second"}`),
+	})))
+
+	assert.Equal(t, map[string]mock.CacheItem{
+		"1": {Value: `{"id":"1","value":"first"}{"id":"1","value":"second"}`},
+	}, mgr.Caches["foocache"])
+}
+
 func TestCacheBatch(t *testing.T) {
 	mgr := mock.NewManager()
 	mgr.Caches["foocache"] = map[string]mock.CacheItem{}
