@@ -8,6 +8,7 @@ import (
 
 	"github.com/warpstreamlabs/bento/internal/bloblang/field"
 	"github.com/warpstreamlabs/bento/internal/bundle"
+	"github.com/warpstreamlabs/bento/internal/component"
 	"github.com/warpstreamlabs/bento/internal/component/cache"
 	"github.com/warpstreamlabs/bento/internal/component/interop"
 	"github.com/warpstreamlabs/bento/internal/component/output"
@@ -173,9 +174,35 @@ func (c *CacheWriter) writeMulti(ctx context.Context, msg message.Batch) (err er
 		if terr != nil {
 			return fmt.Errorf("key interpolation error: %w", terr)
 		}
-		items[keyStr] = cache.TTLItem{
-			Value: p.AsBytes(),
-			TTL:   ttl,
+		if c.appendCache {
+			var current []byte
+			if cacheItem, ok := items[keyStr]; ok {
+				current = append(cacheItem.Value, p.AsBytes()...)
+			} else {
+				if cerr := c.mgr.AccessCache(ctx, c.target, func(ac cache.V1) {
+					current, err = ac.Get(ctx, keyStr)
+					if err == nil {
+						current = append(current, p.AsBytes()...)
+					} else if errors.Is(err, component.ErrKeyNotFound) {
+						current = p.AsBytes()
+						err = nil
+					}
+				}); cerr != nil {
+					err = cerr
+				}
+				if err != nil {
+					return err
+				}
+			}
+			items[keyStr] = cache.TTLItem{
+				Value: current,
+				TTL:   ttl,
+			}
+		} else {
+			items[keyStr] = cache.TTLItem{
+				Value: p.AsBytes(),
+				TTL:   ttl,
+			}
 		}
 		return nil
 	}); err != nil {
@@ -219,7 +246,7 @@ func (c *CacheWriter) WriteBatch(ctx context.Context, msg message.Batch) (err er
 			current, err = cache.Get(ctx, key)
 			if err == nil {
 				err = cache.Set(ctx, key, append(current, msg.Get(0).AsBytes()...), ttl)
-			} else if errors.Is(err, service.ErrKeyNotFound) {
+			} else if errors.Is(err, component.ErrKeyNotFound) {
 				err = cache.Set(ctx, key, msg.Get(0).AsBytes(), ttl)
 			}
 		} else {
