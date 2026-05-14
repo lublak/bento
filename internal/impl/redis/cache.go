@@ -157,10 +157,8 @@ func (r *redisCache) Exists(ctx context.Context, key string) (bool, error) {
 	for {
 		res, err := r.client.Exists(ctx, key).Result()
 		if err == nil {
-			if res == 1 {
-				return true, nil
-			}
-			return false, nil
+			// 0 = false, 1 = true
+			return res == 1, nil
 		}
 
 		if errors.Is(err, redis.Nil) {
