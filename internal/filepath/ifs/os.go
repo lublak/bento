@@ -48,7 +48,7 @@ func FileExists(f fs.FS, name string) (bool, error) {
 			}
 			return false, err
 		}
-		file.Close()
+		defer file.Close()
 		return true, nil
 	}
 }
