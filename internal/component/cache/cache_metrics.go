@@ -20,6 +20,10 @@ type metricsCache struct {
 	mGetSuccess  metrics.StatCounter
 	mGetLatency  metrics.StatTimer
 
+	mExistsError   metrics.StatCounter
+	mExistsSuccess metrics.StatCounter
+	mExistsLatency metrics.StatTimer
+
 	mSetError   metrics.StatCounter
 	mSetSuccess metrics.StatCounter
 	mSetLatency metrics.StatTimer
@@ -48,6 +52,10 @@ func MetricsForCache(c V1, stats metrics.Type) V1 {
 		mGetError:    cacheError.With("get"),
 		mGetSuccess:  cacheSuccess.With("get"),
 		mGetLatency:  cacheLatency.With("get"),
+
+		mExistsError:   cacheError.With("exists"),
+		mExistsSuccess: cacheSuccess.With("exists"),
+		mExistsLatency: cacheLatency.With("exists"),
 
 		mSetError:   cacheError.With("set"),
 		mSetSuccess: cacheSuccess.With("set"),
@@ -83,15 +91,11 @@ func (a *metricsCache) Get(ctx context.Context, key string) ([]byte, error) {
 func (a *metricsCache) Exists(ctx context.Context, key string) (bool, error) {
 	started := time.Now()
 	b, err := CacheKeyExists(a.c, ctx, key)
-	a.mGetLatency.Timing(int64(time.Since(started)))
+	a.mExistsLatency.Timing(int64(time.Since(started)))
 	if err != nil {
-		if errors.Is(err, component.ErrKeyNotFound) {
-			a.mGetNotFound.Incr(1)
-		} else {
-			a.mGetError.Incr(1)
-		}
+		a.mExistsError.Incr(1)
 	} else {
-		a.mGetSuccess.Incr(1)
+		a.mExistsSuccess.Incr(1)
 	}
 	return b, err
 }
