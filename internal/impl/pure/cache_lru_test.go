@@ -21,7 +21,7 @@ func TestLRUCacheStandard(t *testing.T) {
 	c, err := lruMemCacheFromConfig(defConf)
 	require.NoError(t, err)
 
-	testServiceCache(t, c)
+	testLRUCache(t, c)
 }
 
 func TestLRUCacheOptimistic(t *testing.T) {
@@ -35,7 +35,7 @@ optimistic: true
 	c, err := lruMemCacheFromConfig(defConf)
 	require.NoError(t, err)
 
-	testServiceCache(t, c)
+	testLRUCache(t, c)
 }
 
 func TestLRUCacheInitValues(t *testing.T) {
@@ -98,7 +98,7 @@ func TestLRUCacheAlgorithms(t *testing.T) {
 			c, err := lruMemCacheFromConfig(defConf)
 			require.NoError(t, err)
 
-			testServiceCache(t, c)
+			testLRUCache(t, c)
 		})
 	}
 }
@@ -151,7 +151,7 @@ func BenchmarkLRUParallel(b *testing.B) {
 	})
 }
 
-func testServiceCache(t *testing.T, c service.Cache) {
+func testLRUCache(t *testing.T, c *lruCacheAdapter) {
 	t.Helper()
 
 	ctx := context.Background()
